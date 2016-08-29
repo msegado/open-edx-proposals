@@ -110,6 +110,11 @@ The design of the ``oeps`` dictionary was guided by a couple of use cases:
 3. As much as possible, Best Practices should be autodetected, but because they will
    often involve a judgement call, autodetection shouldn't be mandatory.
 
+
+Change History
+==============
+
+
 Copyright
 =========
 
