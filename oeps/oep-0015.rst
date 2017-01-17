@@ -1,11 +1,11 @@
 =====================================
-OEP-15: Course-wide JS and CSS Assets
+OEP-15: Course-wide Custom JavaScript
 =====================================
 
 +---------------+----------------------------------------------------+
 | OEP           | :doc:`OEP-15 </oeps/oep-0015>`                     |
 +---------------+----------------------------------------------------+
-| Title         | Author-specified Course-wide JS and CSS            |
+| Title         | Course-wide Custom JavaScript                      |
 +---------------+----------------------------------------------------+
 | Last Modified | 2016-08-29                                         |    <<<<<<<<<<<<<<<<< TODO
 +---------------+----------------------------------------------------+
@@ -32,95 +32,92 @@ OEP-15: Course-wide JS and CSS Assets
 Abstract
 ========
 
-The Open edX platform is a powerful tool for both content authoring and learning-sciences research, in part due to its support for including arbitrary JavaScript and CSS assets in course materials; custom scripts, for example, allow researchers to conduct novel experiments and log custom learner interaction events for analysis. Unfortunately, deploying and maintaining such assets across an entire course (or multiple courses) is a significant challenge, especially in Studio-based workflows where :code:`<script type="text/javascript">` or :code:`<style>` elements must be included manually in every vertical. As an alternative, this OEP proposes a mechanism for authors to include custom JavaScript and CSS assets across an entire course using a policy key. The implementation is fully backward-compatible and leverages existing XBlock infrastructure to include the assets into the LMS.
+The Open edX platform is a powerful tool for both content authoring and learning-sciences research, in part due to its support for including arbitrary JavaScript in course materials; for example, such scripts can enable researchers to conduct novel experiments and log custom learner interaction events for analysis. Unfortunately, deploying and maintaining JavaScript assets across an entire course (or multiple courses) is a significant challenge, especially in Studio-based workflows where :code:`<script type="text/javascript">` elements must be included manually in every vertical. As an alternative, this OEP proposes a mechanism for authors to include custom JavaScript across an entire course using a policy key. The implementation is fully backward-compatible and leverages existing XBlock infrastructure to include scripts in the LMS.
 
 Motivation
 ==========
 
-- benefits:
-  - faciliatate research (especially multi-course deployment)
-    - e.g., Logging custom events (this alone make the platform even more valuable for conducting research) 
-  - enable easier deployment of standardized scripts/styles
-    - org level: harvard's JS
-    - course level: styles for "warnings", etc. / Consistently styling course content (e.g., by creating classes for things like callout boxes or image alignment)
-  - enable inclusion of libraries/styles for things like course-wide code block syntax highlighting or dynamically-rendered mathematical graphs
-  - allow for inclusion + rapid iteration on experimental features (e.g., one course at MIT includes a course-material search bar; again, complete with event logging for - research)
+The primary goal of this OEP is to facilitate research and experimentation by removing the bariers to large-scale JavaScript inclusion. Simplifying the inclusion of scripts is especially important for experiments spanning many courses (e.g., all MITx courses): it is not reasonable to expect all course teams at an institution to manually modify every single vertical in their course to include a research script as is the case with the current platform, but it is quite feasible to request that they make a single easy-to-reverse change to their course policy.
 
-
-- existing processes:
-  - inline script/style tags
-    - works, but deployment requires scripting (or build step in e.g. latex2edx) or manual copying
-
-  - xblocks
-    - can't inject allow course-wide content (can only live inside verticals)
-    - can't use within other content (e.g., as a code syntax highligter in a problem description)
-    - must be accepted and enabled by the hosting platform; harder to iterate, and not necessarily relevant to *all* courses on that platform for things like smaller-scale research studies
-    - these features make it good for custom content types, but not for general research scripts or broad course-wide utilities/styling
-
-    - the proposal to `allow XBlocks to be displayed in a course tab` (an idea refered to as `course-level XBlock views` in an earlier discussion) would allow inclusion in a top-level tab, but they are not displayed at the same time as the courseware and so would not be a viable solution. They also have the other drawbacks of xblocks discussed above.
-
-.. _course-level XBlock views: https://groups.google.com/d/topic/edx-code/Xlfof0JFlMo/discussion
-.. _allow XBlocks to be displayed in a course tab XBlock tabs: https://groups.google.com/d/topic/edx-code/ywjXV0wzQiw/discussion
-
+As an additional benefit, a course-wide JavaScript mechanism would also simplify the use of course- or institution-wide utility scripts; HarvardX, for example, maintains a custom JS library for course authors.
 
 Specification
 =============
 
-- Add a new policy key (name TBD) for course-wide assets:
+The proposed implementation adds a new policy key for custom course-wide scripts (name TBD):
 
 .. code-block:: json
 
    {
-     "web_assets": [
-       "/static/mystyles.css",
+     "global_scripts": [
        "/static/experiment.js",
-       "//somecdn.com/library.js"
+       "//some.cdn.com/library.js"
      ]
    }
 
-The courseware template already receives and renders an XBlock fragment (which includes JS and CSS resources); additional resources could simply be added to this fragment `when the courseware context is created`_. This approach leverages the existing XBlock/Django infrastructure to handle de-duping and rendering, so I expect little code would be needed for the actual implementation.
+Since the edX courseware template already receives and renders an XBlock fragment (which includes JavaScript resources), additional script resources would simply be added to this fragment `when the courseware context is created`_.
 
-.. _when the courseware context is created: https://github.com/edx/edx-platform/blob/add4d3bce3bd5a9a1a5ce4f3cbf9d416c6eb1ee2/lms/djangoapps/courseware/views/index.py#L373-L437
+.. _when the courseware context is created: https://github.com/edx/edx-platform/blob/d497e194623dd32ad5a66f141529129267db645c/lms/djangoapps/courseware/views/index.py#L372-L441
 
 Rationale
 =========
 
-- stems from my current position as a researcher [difficulty deploying a study to several courses] and former position working on content with a course team
-- at least some additional interest at MIT + likely interest at Harvard
+The approach above leverages the existing XBlock/Django infrastructure to handle de-duping and rendering, so little new code should be needed for a working implementation. A course policy setting (which would appear on the *Advanced Settings* page of edX Studio) is a good fit for the user-facing portion of the feature:
 
-- alternate designs:
-  - a general purpose XML processing script to be used with course export/import
-    - adds work for Studio-based courses + doesn't keep content stay in sync automatically
+- Research script inclusion fits well within the `existing description and warning`_ on the Studio *Advanced Settings* page:
+    **What do advanced settings do?**
 
-- only public discussion so far: [edx code link]
+    Advanced settings control specific course functionality. On this page, you can edit manual policies, which are JSON-based key and value pairs that control specific course settings.
 
-"This approach leverages the existing XBlock/Django infrastructure to handle de-duping and rendering"
+    Any policies you modify here override all other information you've defined elsewhere in Studio. Do not edit policies unless you are familiar with both their purpose and syntax.
 
-- concerns/objections so far:
+- A policy setting requires no additional UI (display and editing is already handled by Studio), reducing implementation and maintenance burden
 
-Possible concerns & mitigation strategies:
+- Policy settings are conceptually course-wide in scope, which matches the scope of course-wide scripts
 
- - I think some of your use cases would be better handled through XBlock dependencies. For example, IMO a complex feature like code syntax highlighting should be associated with a particular XBlock, rather than being added to an Advanced HTML block. Having the assets tied to the course means that even if the block in question is removed, the assets would still be loaded. It would be better to have them requested on-demand by only the blocks that need them. Having said that, we don't have a mechanism in XBlock to allow multiple blocks to share the same library.
+.. _existing description and warning: https://github.com/edx/edx-platform/blob/d497e194623dd32ad5a66f141529129267db645c/cms/templates/settings_advanced.html#L83-L86
 
-Yeah, I see what you're saying - there's definitely a risk of vestigial libraries being loaded with this approach (or libraries just being loaded earlier than needed). On the other hand, XBlocks also don't seem to me like a great fit for syntax highlighting or similar use cases... some specific concerns:
-Developing new XBlocks requires enough know-how than it's likely out of reach for course authors (compared to, e.g., dropping in the script/CSS files for PrismJS to add syntax highlighting course-wide)
-XBlocks have to be accepted/installed into the platform before being used [I think?], while scripts/CSS resources can be added immediately by course authors
-XBlocks can't currently be nested inside <problem> or <html> modules, so they're not great for things that might appear interspersed with text like code examples or graphs
- - There are performance implications to loading a number of individual files like this. Having said that, it would be difficult to have individual courses contribute files to the static asset pipeline, since courses can be created/imported after the LMS has been stood up.
+Why not XBlocks?
+----------------
 
-Agreed, though hopefully this will be less of an issue when HTTP/2 takes over sometime in the not-too-distant future =) The fact that static assets are cached should help in the meantime... it looks like edX sets the Cache-Control max-age to 1 year, and external JavaScript CDNs probably have fairly efficient caching behavior too.
+Custom XBlocks cannot be instantiated at the top level of the courseware; as with script tags, they would need to be added to every vertical in a course for course-wide experiments. The `XBlock course tabs` idea on edx-code (originally referred to as `course-level XBlock views`) would permit blocks to be loaded outside of verticals, but these would only be active when a user explicitly navigates to their tab, not when users are interacting with the courseware as required here.
 
-Some additional questions raised by Andy Armstrong on edx-code:
+.. _course-level XBlock views: https://groups.google.com/d/topic/edx-code/Xlfof0JFlMo/discussion
+.. _XBlock course tabs: https://groups.google.com/d/topic/edx-code/ywjXV0wzQiw/discussion
 
-  - I'd like to consider how such a mechanism should interact with AMD-style loading. We have had some preliminary experimentation with combining XBlocks with RequireJS, and I think it is important to take that into account.
-    > my suggestion: deal with this at the level of the xblock runtime. changes will take automatically
+What about performance?
+-----------------------
 
-  - We might want to make this feature be something that can be disabled if a given installation is not comfortable with giving this power to its authors. As you point out, the power is already there through multiple other mechanisms, so maybe this isn't a concern.
+A few issues raised in the initial `edx-code thread` centered around performance. The first concerns the use of this feature to load JavaScript libraries (e.g., for things like course-wide code syntax highlighting):
+
+    "Having the assets tied to the course means that even if the block [using such assets] is removed, the assets would still be loaded. It would be better to have them requested on-demand by only the blocks that need them. Having said that, we don't have a mechanism in XBlock to allow multiple blocks to share the same library."
+
+This is a valid point; there's a risk of vestigial libraries being loaded with this approach. The simplest way to address this concern is to recommend that authors not use this feature for libraries and instead continue loading these using the existing mechanism (i.e., by adding script tags in any blocks where they are needed).
+
+    "I'd like to consider how such a mechanism should interact with AMD-style loading. We have had some preliminary experimentation with combining XBlocks with RequireJS, and I think it is important to take that into account."
+
+I believe this should be handled automatically; since the proposed implementation for this OEP relies on the XBlock runtime to load scripts, any future changes to the runtime's loading strategy will also affect course-wide scripts.
+
+    "There are performance implications to loading a number of individual files like this. Having said that, it would be difficult to have individual courses contribute files to the static asset pipeline, since courses can be created/imported after the LMS has been stood up."
+
+Agreed, though hopefully this will be less of an issue when HTTP/2 takes over in the not-too-distant future. The fact that static assets are cached should help in the meantime; it looks like edX sets the Cache-Control max-age to 1 year, and external JavaScript CDNs should also have reasonable caching behavior.
+
+What about security?
+--------------------
+
+....... TODO
+
+The ability to include arbitrary JavaScript in a course already exists; this feature just provides a more elegant way to do so course-wide. It is possible that making it easier would lead to wider script usage and thus increase the odds of users creating a vulnerability; this could be mitigated by (1) adding a stern warning to the policy key description about including scripts only from trusted origins, or (2) limiting this feature to /static/* files if it's a really big concern.
+
+    "We might want to make this feature be something that can be disabled if a given installation is not comfortable with giving this power to its authors. As you point out, the power is already there through multiple other mechanisms, so maybe this isn't a concern."
 
 
-Security. Again, though, the ability to include arbitrary JavaScript in a course already exists... this feature just provides a more elegant way to do so course-wide. It is possible that making it easier would lead to wider script usage and thus increase the odds of users creating a vulnerability; this could be mitigated by (1) adding a stern warning to the policy key description about including scripts only from trusted origins, or (2) limiting this feature to /static/* files if it's a really big concern.
+What about compatibility and support?
+-------------------------------------
 
-Support. Platform hosts such as edX should make it clear that this is a power-user feature that would carry no support beyond that for current <script> and <style> tags (i.e., the platform guarantees that your scripts will make it into the page, but you're on your own if they don't work or if something breaks due to platform changes). As with security above, it's possible there will be more complaints/support requests from users simply because of wider script/CSS usage, though good documentation and a warning in the policy key description should hopefully keep these to a minimum.
+Platform hosts such as edX should make it clear that this is a power-user feature that would carry no support beyond that for current <script> and <style> tags (i.e., the platform guarantees that your scripts will make it into the page, but you're on your own if they don't work or if something breaks due to platform changes). As with security above, it's possible there will be more complaints/support requests from users simply because of wider script/CSS usage, though good documentation and a warning in the policy key description should hopefully keep these to a minimum.
+
+........ TODO
 
 Backward Compatibility
 =======================
@@ -135,8 +132,15 @@ Reference Implementation
 Rejected Alternatives
 =====================
 
-- primary alternative is the scripting approach, which would be separate to the platform.
-  - rejected/shelved because...?
-    - might have value on its own, but for this application, it seems like a hack to include script tags all over the place...?
+.. - alternate designs:
+..   - a general purpose XML processing script to be used with course export/import
+..     - adds work for Studio-based courses + doesn't keep content stay in sync automatically
 
-- (any other alternative designs or implementations that were considered and rejected?)
+.. - primary alternative is the scripting approach, which would be separate to the platform.
+..   - rejected/shelved because...?
+..     - might have value on its own, but for this application, it seems like a hack to include script tags all over the place...?
+
+
+.. - extra_scripts property, rather than top level?
+
+.. - (any other alternative designs or implementations that were considered and rejected?)
